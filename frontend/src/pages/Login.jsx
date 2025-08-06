@@ -31,7 +31,13 @@ const Login = () => {
       toast.success('Welcome back!');
       navigate(from, { replace: true });
     } catch (err) {
-      toast.error(err.message || 'Login failed');
+      // Try to show backend error message if available
+      const message =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Login failed';
+      toast.error(message);
     }
   };
 
@@ -46,6 +52,7 @@ const Login = () => {
 
     try {
       await register({
+        username: data.username,
         name: data.name,
         email: data.email,
         password: data.password,
@@ -53,7 +60,17 @@ const Login = () => {
       toast.success('Account created successfully!');
       navigate(from, { replace: true });
     } catch (err) {
-      toast.error(err.message || 'Registration failed');
+      // Show backend validation errors if available
+      if (err.response?.data?.errors) {
+        err.response.data.errors.forEach(e => toast.error(e.msg));
+      } else {
+        const message =
+          err.response?.data?.message ||
+          err.response?.data?.error ||
+          err.message ||
+          'Registration failed';
+        toast.error(message);
+      }
     }
   };
 
@@ -88,7 +105,7 @@ const Login = () => {
           </div>
 
           {/* Demo Credentials */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          {/* <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
               Demo Credentials:
             </p>
@@ -96,7 +113,7 @@ const Login = () => {
               <div><strong>Admin:</strong> admin@example.com / password</div>
               <div><strong>Customer:</strong> user@example.com / password</div>
             </div>
-          </div>
+          </div> */}
 
           {/* Login Form */}
           {isLogin ? (
@@ -184,6 +201,13 @@ const Login = () => {
                 </div>
               </div>
 
+              {/* Show login error */}
+              {error && (
+                <div className="mb-2 text-sm text-red-600 dark:text-red-400 text-center">
+                  {error}
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={isLoading}
@@ -201,28 +225,30 @@ const Login = () => {
             <form className="mt-8 space-y-6" onSubmit={registerForm.handleSubmit(onRegisterSubmit)}>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Full Name
+                  <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Username
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
-                      {...registerForm.register('name', {
-                        required: 'Name is required',
-                        minLength: {
-                          value: 2,
-                          message: 'Name must be at least 2 characters',
+                      {...registerForm.register('username', {
+                        required: 'Username is required',
+                        minLength: { value: 3, message: 'Username must be at least 3 characters' },
+                        maxLength: { value: 30, message: 'Username must be at most 30 characters' },
+                        pattern: {
+                          value: /^[a-zA-Z0-9_]+$/,
+                          message: 'Username can only contain letters, numbers, and underscores',
                         },
                       })}
                       type="text"
-                      autoComplete="name"
+                      autoComplete="username"
                       className="w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter your full name"
+                      placeholder="Choose a username"
                     />
                   </div>
-                  {registerForm.formState.errors.name && (
+                  {registerForm.formState.errors.username && (
                     <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                      {registerForm.formState.errors.name.message}
+                      {registerForm.formState.errors.username.message}
                     </p>
                   )}
                 </div>
@@ -281,10 +307,18 @@ const Login = () => {
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
-                  {registerForm.formState.errors.password && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  {registerForm.formState.errors.password ? (
+                    <div className="mt-1 text-sm text-red-600 dark:text-red-400">
                       {registerForm.formState.errors.password.message}
-                    </p>
+                      <ul className="list-disc ml-5 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        <li>At least 6 characters</li>
+                        {/* Add more conditions here if needed */}
+                      </ul>
+                    </div>
+                  ) : (
+                    <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Password must be at least 6 characters.
+                    </div>
                   )}
                 </div>
 
@@ -310,6 +344,9 @@ const Login = () => {
                     </p>
                   )}
                 </div>
+
+                {/* Add Username Field */}
+                
               </div>
 
               <div className="flex items-center">
@@ -331,6 +368,13 @@ const Login = () => {
                   </a>
                 </label>
               </div>
+
+              {/* Show registration error */}
+              {error && (
+                <div className="mb-2 text-sm text-red-600 dark:text-red-400 text-center">
+                  {error}
+                </div>
+              )}
 
               <button
                 type="submit"

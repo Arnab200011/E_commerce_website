@@ -1,20 +1,31 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { loginStart, loginSuccess, loginFailure, logout } from '../store/slices/authSlice';
 import { authService } from '../services/authService';
+import { useState } from 'react';
 
 export const useAuth = () => {
   const dispatch = useDispatch();
   const { user, token, isLoading, error } = useSelector((state) => state.auth);
+  const [isLoadingState, setIsLoading] = useState(false);
+  const [errorState, setError] = useState(null);
 
   const login = async (credentials) => {
-    dispatch(loginStart());
+    setError(null);
+    setIsLoading(true);
     try {
       const response = await authService.login(credentials);
       dispatch(loginSuccess(response));
       return response;
     } catch (err) {
+      setError(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        'Invalid email or password'
+      );
       dispatch(loginFailure(err.message || 'Login failed'));
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -43,8 +54,8 @@ export const useAuth = () => {
   return {
     user,
     token,
-    isLoading,
-    error,
+    isLoading: isLoadingState,
+    error: errorState,
     isAuthenticated: !!token && !!user,
     login,
     register,
