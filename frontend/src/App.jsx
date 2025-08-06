@@ -8,6 +8,7 @@ import { store } from './store/store';
 import Home from './pages/Home';
 import Products from './pages/Products';
 import Login from './pages/Login';
+import ProductView from './pages/ProductView';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/products" element={<Products />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/products/:id" element={<ProductView />} />
             {/* Add more routes as needed */}
           </Routes>
         </Router>
