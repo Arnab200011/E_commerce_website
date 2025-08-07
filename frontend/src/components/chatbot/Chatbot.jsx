@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { MessageCircle, X, Send, Bot, User, ExternalLink } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, ExternalLink, Wifi, WifiOff } from 'lucide-react';
 import { toggleChatbot, addMessage, setTyping } from '../../store/slices/chatbotSlice';
 import { chatbotService } from '../../services/chatbotService';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,6 +9,7 @@ const Chatbot = () => {
   const dispatch = useDispatch();
   const { isOpen, messages, isTyping } = useSelector((state) => state.chatbot);
   const [inputMessage, setInputMessage] = useState('');
+  const [backendStatus, setBackendStatus] = useState(false);
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -18,6 +19,20 @@ const Chatbot = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
+
+  // Check backend status when component mounts
+  useEffect(() => {
+    const checkBackendStatus = async () => {
+      const status = await chatbotService.checkBackendStatus();
+      setBackendStatus(status);
+    };
+    
+    checkBackendStatus();
+    
+    // Check status every 30 seconds
+    const interval = setInterval(checkBackendStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSendMessage = async (message) => {
     const messageToSend = message || inputMessage.trim();
@@ -37,6 +52,13 @@ const Chatbot = () => {
       // Get bot response
       const response = await chatbotService.sendMessage(messageToSend);
       
+      // Update backend status based on response
+      if (response.message.includes('backend server is running')) {
+        setBackendStatus(false);
+      } else {
+        setBackendStatus(true);
+      }
+      
       dispatch(addMessage({
         text: response.message,
         sender: 'bot',
@@ -44,6 +66,7 @@ const Chatbot = () => {
         data: response.data,
       }));
     } catch (error) {
+      setBackendStatus(false);
       dispatch(addMessage({
         text: 'Sorry, I\'m having trouble right now. Please try again or contact our support team.',
         sender: 'bot',
@@ -136,6 +159,15 @@ const Chatbot = () => {
         className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors"
       >
         {isOpen ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
+        
+        {/* Backend status indicator */}
+        <div className="absolute -top-1 -right-1">
+          {backendStatus ? (
+            <Wifi className="w-4 h-4 text-green-400" />
+          ) : (
+            <WifiOff className="w-4 h-4 text-red-400" />
+          )}
+        </div>
       </motion.button>
 
       {/* Chatbot Window */}
@@ -153,6 +185,13 @@ const Chatbot = () => {
               <div className="flex items-center space-x-2">
                 <Bot className="w-5 h-5" />
                 <h3 className="font-semibold">Shopping Assistant</h3>
+                <div className="flex items-center space-x-1">
+                  {backendStatus ? (
+                    <Wifi className="w-3 h-3 text-green-400" />
+                  ) : (
+                    <WifiOff className="w-3 h-3 text-red-400" />
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => dispatch(toggleChatbot())}
@@ -161,6 +200,16 @@ const Chatbot = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Backend Status Message */}
+            {!backendStatus && (
+              <div className="px-4 py-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs">
+                <div className="flex items-center space-x-1">
+                  <WifiOff className="w-3 h-3" />
+                  <span>Using fallback responses. Start the Python backend for full functionality.</span>
+                </div>
+              </div>
+            )}
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
