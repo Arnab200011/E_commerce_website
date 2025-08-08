@@ -1,6 +1,6 @@
 from pymongo import MongoClient
 
-client=MongoClient("mongodb+srv://manojitsaha788:ah7ybHeyX9kZ3ukz@cluster0.fatxdd1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+client=MongoClient()
 
 db=client['Ecommerce']
 products=db['Products']
