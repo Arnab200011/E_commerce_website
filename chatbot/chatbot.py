@@ -1,24 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from langchain_community.vectorstores import FAISS
+from langchain_huggingface import HuggingFaceEmbeddings
 from Tools import DBaccess as db
 
-# Simple response mapping instead of FAISS
-response_map = {
-    'hello': 'Hi! How may I help you?',
-    'hi': 'Hello! Welcome to our e-commerce store. How can I assist you today?',
-    'help': 'I can help you with:\n- Tracking orders\n- Product information\n- Return policy\n- Shipping information\n- Payment methods\nWhat would you like to know?',
-    'track order': 'Please provide your order ID.',
-    'order': 'Please provide your order ID.',
-    'product': 'Please provide the product name you\'re looking for.',
-    'return': 'Our return policy allows you to return items within 30 days of purchase for a full refund. Items must be in original condition with tags attached.',
-    'return policy': 'Our return policy allows you to return items within 30 days of purchase for a full refund. Items must be in original condition with tags attached.',
-    'shipping': 'We offer free shipping on orders over $100. Standard shipping takes 3-5 business days, and express shipping takes 1-2 business days.',
-    'payment': 'We accept all major credit cards, PayPal, Apple Pay, and Google Pay for secure payment processing.',
-    'bye': 'Goodbye! Feel free to come back if you have any other questions.',
-    'thanks': 'You\'re welcome! Is there anything else I can help you with?',
-    'thank you': 'You\'re welcome! Is there anything else I can help you with?'
-}
+# Load vector store
+embedding_model = HuggingFaceEmbeddings(model_name='all-MiniLM-L6-v2')
+QAstore = FAISS.load_local(folder_path='QAstore', embeddings=embedding_model, allow_dangerous_deserialization=True)
 
 # Initialize app
 app = FastAPI()
@@ -59,24 +48,16 @@ async def chat(req: ChatRequest):
             del user_context[user_id]
             return {"response": f"Here is the product info:\n{product_info}"}
 
-    # Check for specific keywords (exact matches first, then partial matches)
-    # First check for exact matches
-    if msg in response_map:
-        keyword = msg
-        if keyword in ['track order', 'order']:
-            user_context[user_id] = {'type': 'order'}
-        elif keyword == 'product':
-            user_context[user_id] = {'type': 'product'}
-        return {"response": response_map[keyword]}
-    
-    # Then check for partial matches (but avoid false positives)
-    for keyword, response in response_map.items():
-        if keyword in msg and len(keyword) > 2:  # Only match keywords longer than 2 chars
-            if keyword in ['track order', 'order']:
-                user_context[user_id] = {'type': 'order'}
-            elif keyword == 'product':
-                user_context[user_id] = {'type': 'product'}
-            return {"response": response}
+    # Normal query → similarity search
+    result = QAstore.similarity_search(msg, k=1)
+    answer_type = result[0].metadata.get('Answer', '')
 
-    # Default response
-    return {"response": "I'm here to help! You can ask me about products, orders, returns, shipping, or payment methods. What would you like to know?"}
+    if answer_type == 'Track Order':
+        user_context[user_id] = {'type': 'order'}
+        return {"response": "Please provide your order ID."}
+
+    elif answer_type == 'Get Product':
+        user_context[user_id] = {'type': 'product'}
+        return {"response": "Please provide the product name."}
+
+    return {"response": answer_type}
