@@ -8,3 +8,4 @@ langchain-huggingface
 faiss-cpu
 pymongo
 huggingface-hub
+sentence-transformers
