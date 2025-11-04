@@ -1,11 +1,19 @@
 import { useSelector, useDispatch } from 'react-redux';
-import { loginStart, loginSuccess, loginFailure, logout } from '../store/slices/authSlice';
+import {
+  loginStart,
+  loginSuccess,
+  loginFailure,
+  logout,
+  initializeAuth,
+  initializeAuthSuccess,
+  initializeAuthFailure
+} from '../store/slices/authSlice';
 import { authService } from '../services/authService';
 import { useState } from 'react';
 
 export const useAuth = () => {
   const dispatch = useDispatch();
-  const { user, token, isLoading, error } = useSelector((state) => state.auth);
+  const { user, token, isLoading, error, isInitialized } = useSelector((state) => state.auth);
   const [isLoadingState, setIsLoading] = useState(false);
   const [errorState, setError] = useState(null);
 
@@ -51,14 +59,35 @@ export const useAuth = () => {
     }
   };
 
+  const initializeSession = async () => {
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      dispatch(initializeAuthFailure());
+      return;
+    }
+
+    dispatch(initializeAuth());
+
+    try {
+      const user = await authService.getCurrentUser();
+      dispatch(initializeAuthSuccess(user));
+    } catch (err) {
+      console.error('Session initialization error:', err);
+      dispatch(initializeAuthFailure());
+    }
+  };
+
   return {
     user,
     token,
     isLoading: isLoadingState,
     error: errorState,
     isAuthenticated: !!token && !!user,
+    isInitialized,
     login,
     register,
     logout: signOut,
+    initializeSession,
   };
 };
