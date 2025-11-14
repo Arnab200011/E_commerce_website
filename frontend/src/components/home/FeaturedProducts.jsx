@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Star, ShoppingCart, Heart, Eye } from 'lucide-react';
 import { productService } from '../../services/productService';
+import { recommendService } from '../../services/recommendService';
 import { useCart } from '../../hooks/useCart';
 import LoadingSpinner from '../common/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -14,10 +15,40 @@ const FeaturedProducts = () => {
   useEffect(() => {
     const fetchFeaturedProducts = async () => {
       try {
-        const featuredProducts = await productService.getFeaturedProducts();
-        setProducts(featuredProducts);
+        // Try to fetch recommended products for a popular seed
+        const recommended = await recommendService.getRecommendations('iPhone');
+        // Pull full product list to enrich recommended items
+        const allProducts = await productService.getProducts();
+
+        const mapped = recommended.map((r) => {
+          const match = allProducts.find(
+            (p) => p.name?.toLowerCase().includes(r.name?.toLowerCase())
+          );
+          if (match) return match;
+          return {
+            id: r.uid,
+            name: r.name,
+            price: r.original_price,
+            originalPrice: r.original_price,
+            rating: r.rating,
+            brand: 'Recommended',
+            description: 'Recommended product',
+            images: [
+              "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><rect width='100%' height='100%' fill='%23ddd'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23666' font-size='24'>Product</text></svg>"
+            ],
+          };
+        });
+
+        // Limit to 4 items to fit UI grid
+        setProducts(mapped.slice(0, 4));
       } catch (error) {
-        console.error('Error fetching featured products:', error);
+        console.error('Recommend API failed, falling back to mock featured:', error);
+        try {
+          const featuredProducts = await productService.getFeaturedProducts();
+          setProducts(featuredProducts);
+        } catch (fallbackError) {
+          console.error('Error fetching fallback featured products:', fallbackError);
+        }
       } finally {
         setIsLoading(false);
       }
