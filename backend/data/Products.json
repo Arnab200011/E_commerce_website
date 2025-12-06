@@ -1,0 +1,177 @@
+[
+  {
+    "productId": "P001",
+    "name": "iPhone 14 Pro",
+    "description": "Latest iPhone with A16 Bionic chip, 48MP camera, and Dynamic Island",
+    "price": 999.99,
+    "category": "Electronics",
+    "brand": "Apple",
+    "stock": 50,
+    "images": [
+      "https://example.com/iphone14pro-1.jpg",
+      "https://example.com/iphone14pro-2.jpg"
+    ],
+    "metadata": {
+      "color": "Space Black",
+      "storage": "256GB",
+      "screenSize": "6.1 inch"
+    }
+  },
+  {
+    "productId": "P002",
+    "name": "Samsung Galaxy S23 Ultra",
+    "description": "Premium Android smartphone with 200MP camera and S Pen",
+    "price": 1199.99,
+    "category": "Electronics",
+    "brand": "Samsung",
+    "stock": 35,
+    "images": [
+      "https://example.com/galaxy-s23-1.jpg"
+    ],
+    "metadata": {
+      "color": "Phantom Black",
+      "storage": "512GB",
+      "screenSize": "6.8 inch"
+    }
+  },
+  {
+    "productId": "P003",
+    "name": "MacBook Pro 14-inch",
+    "description": "Powerful laptop with M2 Pro chip, 16GB RAM, and stunning Liquid Retina XDR display",
+    "price": 1999.99,
+    "category": "Computers",
+    "brand": "Apple",
+    "stock": 25,
+    "images": [
+      "https://example.com/macbook-pro-14-1.jpg"
+    ],
+    "metadata": {
+      "color": "Space Gray",
+      "processor": "M2 Pro",
+      "ram": "16GB",
+      "storage": "512GB SSD"
+    }
+  },
+  {
+    "productId": "P004",
+    "name": "Sony WH-1000XM5",
+    "description": "Industry-leading noise canceling wireless headphones",
+    "price": 399.99,
+    "category": "Audio",
+    "brand": "Sony",
+    "stock": 100,
+    "images": [
+      "https://example.com/sony-wh1000xm5-1.jpg"
+    ],
+    "metadata": {
+      "color": "Black",
+      "batteryLife": "30 hours",
+      "noiseCanceling": true
+    }
+  },
+  {
+    "productId": "P005",
+    "name": "iPad Air",
+    "description": "Powerful tablet with M1 chip and 10.9-inch Liquid Retina display",
+    "price": 599.99,
+    "category": "Tablets",
+    "brand": "Apple",
+    "stock": 60,
+    "images": [
+      "https://example.com/ipad-air-1.jpg"
+    ],
+    "metadata": {
+      "color": "Blue",
+      "storage": "64GB",
+      "screenSize": "10.9 inch"
+    }
+  },
+  {
+    "productId": "P006",
+    "name": "Dell XPS 15",
+    "description": "High-performance laptop with Intel Core i7, 16GB RAM, and NVIDIA GeForce RTX 3050",
+    "price": 1799.99,
+    "category": "Computers",
+    "brand": "Dell",
+    "stock": 20,
+    "images": [
+      "https://example.com/dell-xps-15-1.jpg"
+    ],
+    "metadata": {
+      "color": "Platinum Silver",
+      "processor": "Intel Core i7-12700H",
+      "ram": "16GB",
+      "storage": "512GB SSD",
+      "gpu": "NVIDIA GeForce RTX 3050"
+    }
+  },
+  {
+    "productId": "P007",
+    "name": "AirPods Pro (2nd Gen)",
+    "description": "Active noise cancellation wireless earbuds with spatial audio",
+    "price": 249.99,
+    "category": "Audio",
+    "brand": "Apple",
+    "stock": 150,
+    "images": [
+      "https://example.com/airpods-pro-2-1.jpg"
+    ],
+    "metadata": {
+      "color": "White",
+      "batteryLife": "6 hours",
+      "noiseCanceling": true
+    }
+  },
+  {
+    "productId": "P008",
+    "name": "LG OLED C2 55-inch TV",
+    "description": "4K OLED smart TV with webOS and AI ThinQ",
+    "price": 1499.99,
+    "category": "Television",
+    "brand": "LG",
+    "stock": 15,
+    "images": [
+      "https://example.com/lg-oled-c2-1.jpg"
+    ],
+    "metadata": {
+      "screenSize": "55 inch",
+      "resolution": "4K",
+      "smartTV": true,
+      "hdr": true
+    }
+  },
+  {
+    "productId": "P009",
+    "name": "Logitech MX Master 3S",
+    "description": "Advanced wireless mouse with ultra-fast scrolling and ergonomic design",
+    "price": 99.99,
+    "category": "Accessories",
+    "brand": "Logitech",
+    "stock": 200,
+    "images": [
+      "https://example.com/logitech-mx-master-3s-1.jpg"
+    ],
+    "metadata": {
+      "color": "Graphite",
+      "connectivity": "Wireless",
+      "batteryLife": "70 days"
+    }
+  },
+  {
+    "productId": "P010",
+    "name": "Canon EOS R6 Mark II",
+    "description": "Full-frame mirrorless camera with 24.2MP sensor and advanced autofocus",
+    "price": 2499.99,
+    "category": "Cameras",
+    "brand": "Canon",
+    "stock": 10,
+    "images": [
+      "https://example.com/canon-eos-r6-1.jpg"
+    ],
+    "metadata": {
+      "sensorSize": "Full Frame",
+      "megapixels": 24.2,
+      "videoResolution": "4K 60fps"
+    }
+  }
+]
