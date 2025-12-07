@@ -53,7 +53,8 @@ const Login = () => {
     try {
       await register({
         username: data.username,
-        name: data.name,
+        // Backend expects `name`; fall back to username when name not provided
+        name: data.name || data.username,
         email: data.email,
         password: data.password,
       });

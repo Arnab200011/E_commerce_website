@@ -20,15 +20,23 @@ export const register = async (req, res) => {
       });
     }
 
-    const { name, email, password } = req.body;
+    const { name, email, password, username } = req.body;
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: 'User with this email already exists'
-      });
+      if (existingUser.email === email) {
+        return res.status(409).json({
+          success: false,
+          message: 'User with this email already exists'
+        });
+      }
+      if (existingUser.username === username) {
+        return res.status(409).json({
+          success: false,
+          message: 'User with this username already exists'
+        });
+      }
     }
 
     // Generate email verification token
@@ -37,12 +45,14 @@ export const register = async (req, res) => {
 
     // Create user with hashed password (pre-save hook will hash it)
     const user = await User.create({
+      username,
       name,
       email,
       passwordHash: password, // Will be hashed by pre-save hook
       role: 'USER',
-      emailVerificationToken: verificationToken,
-      emailVerificationExpires: verificationExpires
+      isEmailVerified: process.env.AUTO_VERIFY_EMAIL !== 'false', // Auto-verify in development (can be disabled via env)
+      emailVerificationToken: process.env.AUTO_VERIFY_EMAIL !== 'false' ? undefined : verificationToken,
+      emailVerificationExpires: process.env.AUTO_VERIFY_EMAIL !== 'false' ? undefined : verificationExpires
     });
 
     // Send verification email
@@ -52,10 +62,23 @@ export const register = async (req, res) => {
       console.error('Failed to send verification email:', emailError);
       // Continue with registration even if email fails
     }
+    if (process.env.SKIP_EMAIL_VERIFICATION === 'true') {
+      user.isEmailVerified = true;
+      user.emailVerificationToken = undefined;
+      user.emailVerificationExpires = undefined;
+      try {
+        await user.save();
+      } catch (saveErr) {
+        console.error('Failed to auto-verify user:', saveErr);
+      }
+    }
 
-    res.status(201).json({
+    const accessToken = generateToken({ id: user._id, email: user.email, role: user.role });
+
+    return res.status(201).json({
       success: true,
-      message: 'Registration successful. Please check your email to verify your account.',
+      message: 'Registration successful',
+      accessToken,
       user: {
         id: user._id,
         name: user.name,
@@ -148,7 +171,8 @@ export const login = async (req, res) => {
     }
 
     // Check if email is verified
-    if (!user.isEmailVerified) {
+    // Require verified email unless developer opts out via SKIP_EMAIL_VERIFICATION
+    if (!user.isEmailVerified && process.env.SKIP_EMAIL_VERIFICATION !== 'true') {
       return res.status(403).json({
         success: false,
         message: 'Please verify your email address before logging in'
@@ -221,6 +245,11 @@ export const getProfile = async (req, res) => {
 
 // Validation rules
 export const registerValidation = [
+  body('username')
+    .trim()
+    .notEmpty().withMessage('Username is required')
+    .isLength({ min: 3, max: 30 }).withMessage('Username must be between 3 and 30 characters')
+    .matches(/^[a-zA-Z0-9_]+$/).withMessage('Username can only contain letters, numbers, and underscores'),
   body('name')
     .trim()
     .notEmpty().withMessage('Name is required')

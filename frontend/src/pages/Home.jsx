@@ -2,7 +2,7 @@ import React from 'react';
 import Layout from '../components/common/Layout';
 import HeroSection from '../components/home/HeroSection';
 import FeaturedProducts from '../components/home/FeaturedProducts';
-import Categories from '../components/home/Categories';
+import ProductsSection from '../components/home/ProductsSection';
 
 const Home = () => {
   return (
@@ -13,7 +13,7 @@ const Home = () => {
     >
       <HeroSection />
       <FeaturedProducts />
-      <Categories />
+      <ProductsSection />
     </Layout>
   );
 };

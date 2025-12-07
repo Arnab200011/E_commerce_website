@@ -1,5 +1,11 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { setSearchQuery, setRecommendedProducts } from '../../store/slices/productSlice';
+import { recommendService } from '../../services/recommendService';
+import { productService, API_BASE as PRODUCT_API_BASE } from '../../services/productService';
+import { searchHistoryService } from '../../services/searchHistoryService';
+import SearchHistoryDropdown from '../common/SearchHistoryDropdown';
 import { ArrowRight, Star, Shield, Truck } from 'lucide-react';
 
 const HeroSection = () => {
@@ -45,7 +51,11 @@ const HeroSection = () => {
               we've got everything you need with unbeatable prices and quality guarantee.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 mb-12">
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <SearchForm />
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <Link
                 to="/products"
                 className="inline-flex items-center justify-center px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-100 transition-all duration-300 transform hover:scale-105 shadow-lg"
@@ -118,3 +128,130 @@ const HeroSection = () => {
 };
 
 export default HeroSection;
+
+function SearchForm() {
+  const [q, setQ] = useState('');
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    if (!q.trim()) return;
+
+    const keyword = q.trim();
+
+    // Update store search query immediately so UI shows the query
+    dispatch(setSearchQuery(keyword));
+
+    try {
+      // Fetch DB search results and recommendations in parallel
+      const [dbResults, recResults] = await Promise.all([
+        productService.searchProducts(keyword).catch(err => {
+          console.error('DB search failed:', err);
+          return [];
+        }),
+        recommendService.getRecommendations(keyword).catch(err => {
+          console.error('Recommend fetch failed:', err);
+          return [];
+        })
+      ]);
+
+      // Map recommendations to product-like format
+      const mappedRecs = (recResults || []).map((rec) => ({
+        id: rec.uid,
+        name: rec.name,
+        price: rec.original_price,
+        originalPrice: rec.original_price,
+        rating: rec.rating,
+        reviewCount: 0,
+        inStock: true,
+        description: '',
+        category: '',
+        brand: '',
+        images: [
+          `${PRODUCT_API_BASE.replace(/\/$/, '')}/images/${encodeURIComponent(rec.uid)}`
+        ],
+      }));
+
+      // dbResults are already mapped by productService.searchProducts
+      const dbList = dbResults || [];
+
+      // Combine: put recommendations first, then DB results that are not already included
+      const seen = new Set();
+      const combined = [];
+
+      for (const p of mappedRecs) {
+        if (!seen.has(String(p.id))) {
+          seen.add(String(p.id));
+          combined.push(p);
+        }
+      }
+
+      for (const p of dbList) {
+        if (!seen.has(String(p.id))) {
+          seen.add(String(p.id));
+          combined.push(p);
+        }
+      }
+
+      // Dispatch combined results to the store (use recommendedProducts slot)
+      dispatch(setRecommendedProducts(combined));
+    } catch (err) {
+      console.error('Search+Recommend failed:', err);
+    }
+
+    // Save search to history (backend if auth, otherwise local fallback)
+    try { await searchHistoryService.saveSearch(q.trim()); } catch (e) {}
+
+    navigate('/products');
+    setQ('');
+    setShowHistory(false);
+  };
+
+  return (
+    <form onSubmit={onSubmit} className="w-full max-w-xl">
+      <div className="flex items-center bg-white rounded-lg overflow-hidden shadow-sm">
+        <div className="relative flex-1">
+          <input
+            type="text"
+            className="w-full px-4 py-3 text-gray-900"
+            placeholder="Search products, e.g. 'iPhone'"
+            value={q}
+            onChange={(e) => { setQ(e.target.value); setShowHistory(true); }}
+            onFocus={async () => {
+              try {
+                const h = await searchHistoryService.getSearchHistory();
+                setHistory(h);
+                setShowHistory(true);
+              } catch (err) {
+                setHistory([]);
+              }
+            }}
+          />
+          <SearchHistoryDropdown
+            items={history}
+            query={q}
+            visible={showHistory && history.length >= 0}
+            onSelect={(val) => {
+              setQ(val);
+              // submit immediately
+              setTimeout(() => {
+                const fakeEvent = { preventDefault: () => {} };
+                onSubmit(fakeEvent);
+              }, 50);
+            }}
+            onClear={async () => { await searchHistoryService.clearSearchHistory(); setHistory([]); setShowHistory(false); }}
+          />
+        </div>
+        <button
+          type="submit"
+          className="px-4 py-3 bg-blue-600 text-white font-semibold"
+        >
+          Search
+        </button>
+      </div>
+    </form>
+  );
+}

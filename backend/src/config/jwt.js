@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 
 export const jwtConfig = {
-  secret: process.env.JWT_SECRET,
-  expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+  secret: process.env.JWT_SECRET || 'dev-secret',
+  expiresIn: process.env.JWT_EXPIRES_IN || process.env.JWT_EXPIRE || '7d'
 };
 
 /**

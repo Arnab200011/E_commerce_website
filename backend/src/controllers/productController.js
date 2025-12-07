@@ -2,8 +2,9 @@ import { body, validationResult } from 'express-validator';
 import Product from '../models/Product.js';
 
 /**
- * Get all products with pagination
+ * Get all products with pagination and randomization
  * GET /api/products?page=1&pageSize=20
+ * Products are returned in random order on each request for variety
  */
 export const getAllProducts = async (req, res) => {
   try {
@@ -19,11 +20,32 @@ export const getAllProducts = async (req, res) => {
     // Get total count for pagination
     const total = await Product.countDocuments(filters);
 
-    // Get products
-    const products = await Product.find(filters)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(pageSize);
+    // Use MongoDB aggregation to randomize products on each request
+    // This ensures a different random selection every time the user refreshes
+    let pipeline = [];
+
+    // Add match stage if filters are present
+    if (Object.keys(filters).length > 0) {
+      pipeline.push({ $match: filters });
+    }
+
+    // Add random sort stage - uses Math.random() for client-side randomization
+    // For better randomization with large datasets, use $sample aggregation stage
+    if (total > 1000) {
+      // For large collections, use $sample for efficient randomization
+      pipeline.push({ $sample: { size: Math.min(pageSize * 10, total) } });
+    } else {
+      // For smaller collections, add a random field and sort
+      pipeline.push({ $addFields: { randomField: { $rand: {} } } });
+      pipeline.push({ $sort: { randomField: 1 } });
+    }
+
+    // Add pagination
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: pageSize });
+
+    // Execute aggregation
+    const products = await Product.aggregate(pipeline);
 
     res.status(200).json({
       success: true,
@@ -37,6 +59,17 @@ export const getAllProducts = async (req, res) => {
     });
   } catch (error) {
     console.error('Get all products error:', error);
+
+    // In development, include the error message and stack for easier debugging
+    if (process.env.NODE_ENV === 'development') {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch products',
+        error: error.message,
+        stack: error.stack
+      });
+    }
+
     res.status(500).json({
       success: false,
       message: 'Failed to fetch products'

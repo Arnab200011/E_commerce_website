@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { 
@@ -16,7 +16,11 @@ import {
 } from 'lucide-react';
 import { toggleCart } from '../../store/slices/cartSlice';
 import { toggleDarkMode } from '../../store/slices/themeSlice';
-import { setSearchQuery } from '../../store/slices/productSlice';
+import { setSearchQuery, setRecommendedProducts } from '../../store/slices/productSlice';
+import { recommendService } from '../../services/recommendService';
+import { productService, API_BASE as PRODUCT_API_BASE } from '../../services/productService';
+import { searchHistoryService } from '../../services/searchHistoryService';
+import SearchHistoryDropdown from '../common/SearchHistoryDropdown';
 import { useAuth } from '../../hooks/useAuth';
 
 const Header = () => {
@@ -28,14 +32,85 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQueryLocal] = useState('');
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const inputRef = useRef(null);
+
+  const performSearch = async (keyword) => {
+    if (!keyword || !keyword.trim()) return;
+    const k = keyword.trim();
+
+    // Update store search query immediately so UI shows the query
+    dispatch(setSearchQuery(k));
+
+    try {
+      // Fetch DB search results and recommendations in parallel
+      const [dbResults, recResults] = await Promise.all([
+        productService.searchProducts(k).catch(err => {
+          console.error('DB search failed:', err);
+          return [];
+        }),
+        recommendService.getRecommendations(k).catch(err => {
+          console.error('Recommend fetch failed:', err);
+          return [];
+        })
+      ]);
+
+      // Map recommendations to product-like format (include image using u_id)
+      const mappedRecs = (recResults || []).map((rec) => ({
+        id: rec.uid,
+        name: rec.name,
+        price: rec.original_price,
+        originalPrice: rec.original_price,
+        rating: rec.rating,
+        reviewCount: 0,
+        inStock: true,
+        description: '',
+        category: '',
+        brand: '',
+        images: [
+          `${PRODUCT_API_BASE.replace(/\/$/, '')}/images/${encodeURIComponent(rec.uid)}`
+        ],
+      }));
+
+      // dbResults are already mapped by productService.searchProducts
+      const dbList = dbResults || [];
+
+      // Combine: put recommendations first, then DB results that are not already included
+      const seen = new Set();
+      const combined = [];
+
+      for (const p of mappedRecs) {
+        if (!seen.has(String(p.id))) {
+          seen.add(String(p.id));
+          combined.push(p);
+        }
+      }
+
+      for (const p of dbList) {
+        if (!seen.has(String(p.id))) {
+          seen.add(String(p.id));
+          combined.push(p);
+        }
+      }
+
+      // Dispatch combined results to the store (use recommendedProducts slot)
+      dispatch(setRecommendedProducts(combined));
+    } catch (err) {
+      console.error('Search+Recommend failed:', err);
+    }
+
+    // Save search to history (backend if auth, otherwise local fallback)
+    try { await searchHistoryService.saveSearch(k); } catch (e) {}
+
+    navigate('/products');
+    setSearchQueryLocal('');
+    setShowHistory(false);
+  };
 
   const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      dispatch(setSearchQuery(searchQuery));
-      navigate('/products');
-      setSearchQueryLocal('');
-    }
+    if (e && e.preventDefault) e.preventDefault();
+    performSearch(searchQuery);
   };
 
   const handleLogout = () => {
@@ -88,9 +163,26 @@ const Header = () => {
                   type="text"
                   placeholder="Search products..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQueryLocal(e.target.value)}
+                    onChange={(e) => { setSearchQueryLocal(e.target.value); setShowHistory(true); }}
+                    onFocus={async () => {
+                      try {
+                        const h = await searchHistoryService.getSearchHistory();
+                        setHistory(h);
+                        setShowHistory(true);
+                      } catch (err) {
+                        setHistory([]);
+                      }
+                    }}
+                    ref={inputRef}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                  <SearchHistoryDropdown
+                    items={history}
+                    query={searchQuery}
+                    visible={showHistory && history.length >= 0}
+                    onSelect={(val) => performSearch(val)}
+                    onClear={async () => { await searchHistoryService.clearSearchHistory(); setHistory([]); setShowHistory(false); }}
+                  />
               </div>
             </form>
           </div>

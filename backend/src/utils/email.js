@@ -20,10 +20,16 @@ const createTransporter = () => {
  * @param {String} verificationToken - Email verification token
  */
 export const sendVerificationEmail = async (email, name, verificationToken) => {
+  // Check if email is configured; if not, skip sending (don't fail registration)
+  if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+    console.warn('Email not configured; skipping verification email');
+    return; // Return early without throwing
+  }
+
   try {
     const transporter = createTransporter();
 
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
 
     const mailOptions = {
       from: process.env.EMAIL_FROM,
@@ -80,6 +86,12 @@ export const sendVerificationEmail = async (email, name, verificationToken) => {
  * @param {String} name - Recipient name
  */
 export const sendWelcomeEmail = async (email, name) => {
+  // Check if email is configured; if not, skip sending
+  if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+    console.warn('Email not configured; skipping welcome email');
+    return; // Return early without throwing
+  }
+
   try {
     const transporter = createTransporter();
 

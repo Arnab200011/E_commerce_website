@@ -3,6 +3,15 @@ import bcrypt from 'bcrypt';
 
 const userSchema = new mongoose.Schema(
   {
+    username: {
+      type: String,
+      unique: true,
+      sparse: true, // Allow multiple null values
+      trim: true,
+      minlength: [3, 'Username must be at least 3 characters'],
+      maxlength: [30, 'Username cannot exceed 30 characters'],
+      match: [/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores']
+    },
     name: {
       type: String,
       required: [true, 'Name is required'],
@@ -51,17 +60,33 @@ userSchema.pre('save', async function (next) {
   }
 
   try {
+    if (!this.passwordHash) {
+      throw new Error('Password is required');
+    }
     const salt = await bcrypt.genSalt(10);
     this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
     next();
   } catch (error) {
+    console.error('Password hashing error:', error);
     next(error);
   }
 });
 
 // Method to compare password
 userSchema.methods.comparePassword = async function (candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.passwordHash);
+  try {
+    if (!this.passwordHash) {
+      throw new Error('User password hash is missing');
+    }
+    if (!candidatePassword) {
+      throw new Error('Candidate password is missing');
+    }
+    const isMatch = await bcrypt.compare(candidatePassword, this.passwordHash);
+    return isMatch;
+  } catch (error) {
+    console.error('Error comparing password:', error);
+    throw error;
+  }
 };
 
 // Remove sensitive data when converting to JSON

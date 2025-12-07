@@ -4,6 +4,8 @@ const initialState = {
   products: [],
   filteredProducts: [],
   currentProduct: null,
+  recommendedProducts: [], // Products from the recommendation engine
+  isUsingRecommendations: false, // True when displaying recommendations
   filters: {
     category: '',
     brand: '',
@@ -40,6 +42,15 @@ const productSlice = createSlice({
     setSortBy: (state, action) => {
       state.sortBy = action.payload;
       productSlice.caseReducers.applySorting(state);
+    },
+    setRecommendedProducts: (state, action) => {
+      state.recommendedProducts = action.payload;
+      state.isUsingRecommendations = true;
+      state.filteredProducts = action.payload;
+    },
+    clearRecommendations: (state) => {
+      state.recommendedProducts = [];
+      state.isUsingRecommendations = false;
     },
     applyFilters: (state) => {
       let filtered = state.products;
@@ -94,5 +105,5 @@ const productSlice = createSlice({
   },
 });
 
-export const { setProducts, setCurrentProduct, updateFilters, setSearchQuery, setSortBy } = productSlice.actions;
+export const { setProducts, setCurrentProduct, updateFilters, setSearchQuery, setSortBy, setRecommendedProducts, clearRecommendations } = productSlice.actions;
 export default productSlice.reducer;

@@ -12,7 +12,7 @@ import { productService } from '../services/productService';
 const Products = () => {
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
-  const { filteredProducts, isLoading, sortBy, searchQuery } = useSelector((state) => state.products);
+  const { filteredProducts, isLoading, sortBy, searchQuery, isUsingRecommendations } = useSelector((state) => state.products);
   const [viewMode, setViewMode] = useState('grid');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -56,11 +56,11 @@ const Products = () => {
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            {searchQuery ? `Search Results for "${searchQuery}"` : 'All Products'}
+            {isUsingRecommendations ? `Recommended Products for "${searchQuery}"` : (searchQuery ? `Search Results for "${searchQuery}"` : 'All Products')}
           </h1>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <p className="text-gray-600 dark:text-gray-400">
-              Showing {filteredProducts.length} products
+              Showing {filteredProducts.length} products {isUsingRecommendations && '(from recommendation engine)'}
             </p>
             
             {/* Controls */}
