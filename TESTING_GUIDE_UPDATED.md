@@ -79,8 +79,16 @@ export TOKEN="eyJhbGc..."
 ---
 
 ### 3. Get Current User Profile
+
+**Using `/me` endpoint:**
 ```bash
 curl -X GET http://localhost:5000/api/auth/me \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Using `/profile` endpoint (alias):**
+```bash
+curl -X GET http://localhost:5000/api/auth/profile \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -92,10 +100,128 @@ curl -X GET http://localhost:5000/api/auth/me \
     "id": "507f1f77bcf86cd799439011",
     "name": "John Doe",
     "email": "john@example.com",
-    "role": "USER"
+    "role": "USER",
+    "isEmailVerified": false,
+    "lastLoginAt": "2026-02-25T10:30:00Z",
+    "createdAt": "2026-02-25T09:00:00Z"
   }
 }
 ```
+
+---
+
+### 4. Refresh Access Token (Session Persistence)
+
+When your access token expires, use the refresh token (stored in HTTP-only cookie) to get a new one without re-logging in.
+
+```bash
+curl -X POST http://localhost:5000/api/auth/refresh-token \
+  -H "Content-Type: application/json" \
+  -b "refreshToken=YOUR_REFRESH_TOKEN"
+```
+
+**Note:** The refresh token is automatically sent in cookies. Frontend handles this automatically via axios interceptor.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Token refreshed successfully",
+  "accessToken": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+
+**When to use:** Automatically called by frontend when access token expires (401 status).
+
+---
+
+### 5. Logout (Single Device)
+
+Log out from current device. Other devices remain logged in.
+
+```bash
+curl -X POST http://localhost:5000/api/auth/logout \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -b "refreshToken=YOUR_REFRESH_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Logged out successfully"
+}
+```
+
+**What happens:**
+- Refresh token is removed from database
+- Refresh token cookie is cleared
+- User cannot use refresh token anymore
+- Must log in again to access protected routes
+
+---
+
+### 6. Logout All Devices
+
+Log out from all devices at once. All refresh tokens are invalidated.
+
+```bash
+curl -X POST http://localhost:5000/api/auth/logout-all \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Logged out from all devices successfully"
+}
+```
+
+**What happens:**
+- All refresh tokens are deleted from database
+- All devices are immediately logged out
+- All refresh token cookies are cleared
+- Must log in again to access protected routes
+- Useful for security when password is compromised
+
+---
+
+## 🔄 Session Management Flow
+
+### Complete Session Lifecycle
+
+1. **User Registration/Login**
+   - Access Token generated (short-lived: 7 days)
+   - Refresh Token generated (long-lived: 7 days)
+   - Access Token → stored in frontend localStorage
+   - Refresh Token → stored in HTTP-only cookie automatically
+
+2. **Page Refresh (Before Expiration)**
+   - Frontend reads access token from localStorage
+   - Access token is still valid, no refresh needed
+   - User stays logged in
+
+3. **After Access Token Expires**
+   - Admin/protected endpoint returns 401
+   - Frontend axios interceptor detects 401
+   - Automatically calls `/api/auth/refresh-token`
+   - New access token is received
+   - Original request is retried with new token
+
+4. **User Logout (Single Device)**
+   - Call `POST /api/auth/logout`
+   - Refresh token removed from database
+   - Frontend clears localStorage and redirects to login
+   - Other devices can still use their refresh tokens
+
+5. **User Logout All Devices**
+   - Call `POST /api/auth/logout-all`
+   - All refresh tokens deleted from database
+   - All devices are logged out immediately
+   - Everyone must re-login
 
 ---
 

@@ -97,6 +97,21 @@ const userSchema = new mongoose.Schema(
       }
     ],
 
+    // Session Management
+    refreshTokens: [
+      {
+        token: {
+          type: String,
+          required: true
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+          expires: 604800 // 7 days in seconds
+        }
+      }
+    ],
+
     // Timestamps
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }

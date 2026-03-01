@@ -7,12 +7,16 @@ import jwt from 'jsonwebtoken';
 
 // Configuration from environment or defaults
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key-change-in-production';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-in-production';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 const JWT_ISSUER = 'ecommerce-api';
 
 export const jwtConfig = {
   secret: JWT_SECRET,
+  refreshSecret: JWT_REFRESH_SECRET,
   expiresIn: JWT_EXPIRES_IN,
+  refreshExpiresIn: JWT_REFRESH_EXPIRES_IN,
   issuer: JWT_ISSUER
 };
 
@@ -50,6 +54,53 @@ export const generateToken = (user) => {
     subject: user.id.toString(),
     audience: 'ecommerce-users'
   });
+};
+
+/**
+ * Generate refresh token (longer-lived token for session persistence)
+ * 
+ * @param {Object} user - User object
+ * @param {string} user.id - User ID
+ * @returns {string} Refresh token
+ */
+export const generateRefreshToken = (user) => {
+  if (!user.id) {
+    throw new Error('User must have id to generate refresh token');
+  }
+
+  const payload = {
+    id: user.id,
+    type: 'refresh'
+  };
+
+  return jwt.sign(payload, JWT_REFRESH_SECRET, {
+    expiresIn: JWT_REFRESH_EXPIRES_IN,
+    issuer: JWT_ISSUER,
+    subject: user.id.toString()
+  });
+};
+
+/**
+ * Verify refresh token
+ * 
+ * @param {string} token - Refresh token to verify
+ * @returns {Object} Decoded token payload
+ * @throws {Error} If token is invalid or expired
+ */
+export const verifyRefreshToken = (token) => {
+  try {
+    return jwt.verify(token, JWT_REFRESH_SECRET, {
+      issuer: JWT_ISSUER
+    });
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      throw new Error('Refresh token has expired');
+    }
+    if (error.name === 'JsonWebTokenError') {
+      throw new Error('Invalid refresh token');
+    }
+    throw new Error('Refresh token verification failed');
+  }
 };
 
 /**
@@ -128,7 +179,9 @@ export const isTokenExpired = (token) => {
 export default {
   jwtConfig,
   generateToken,
+  generateRefreshToken,
   verifyToken,
+  verifyRefreshToken,
   decodeToken,
   getTokenExpiration,
   isTokenExpired
