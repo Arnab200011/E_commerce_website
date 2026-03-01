@@ -1,4 +1,4 @@
 Product_db/
 .env
 .env.example
-node_modules/
+E_commerce_website-main\unified-backend\node_modules
